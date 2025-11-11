@@ -1,0 +1,12 @@
+--- INÍCIO DA REQUISIÇÃO ---
+Corpo Bruto: {"amount":6785}
+Array $data: Array
+(
+    [amount] => 6785
+)
+
+Validação OK. 'amount' encontrado: 6785
+Payload Payevo: {"paymentMethod":"PIX","amount":6785,"customer":{"name":"Usuario","email":"usuario@gmail.com","document":{"type":"CPF","number":"41452770824"}},"items":[{"description":"Produto da Loja","amount":6785,"quantity":1}],"description":"Pedido da Loja","ip":"179.48.231.214"}
+Resposta Payevo (HTTP 500): {"error":"Erro interno ao criar transação","details":"Failed to process transaction","code":"Error"}
+--- FIM ---
+

@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Mercado Livre</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Estilos do Modal PIX  */
+        .pix-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1002;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 10vh;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .pix-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .pix-modal-content {
+            background: white;
+            border-radius: 6px;
+            padding: 20px;
+            width: 90%;
+            max-width: 450px;
+            position: relative;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .pix-modal-overlay.active .pix-modal-content {
+            transform: scale(1);
+        }
+        
+        .pix-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .pix-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 400;
+            color: #333;
+        }
+
+        .pix-modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pix-copy-area {
+            display: flex;
+            margin-top: 10px;
+        }
+
+        .pix-copy-area input {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 4px 0 0 4px;
+            background-color: #f7f7f7;
+        }
+
+        .pix-copy-area button {
+            border: none;
+            background: #e0e0e0;
+            padding: 0 15px;
+            cursor: pointer;
+            border-radius: 0 4px 4px 0;
+        }
+
+        #pixQrCode {
+            max-width: 250px;
+            width: 100%;
+            margin: 15px auto;
+            display: block;
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+            min-height: 250px;
+            background-color: #f9f9f9;
+        }
+
+        .pix-loader-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3483FA; /* Cor do spinner */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <header class="bg-yellow-400 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <img
+  src="images/logo.png"
+  alt="Descrição da imagem"
+  style="display:inline-block; max-width:100%; width:auto; height:auto!important; vertical-align:middle;"/>
+            </div>
+            <div class="flex items-center gap-2 text-gray-700">
+                <i data-lucide="lock" class="w-5 h-5"></i>
+                <span class="font-medium">Compra segura</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="bg-white border-b">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-center gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">1</div>
+                    <span class="font-medium text-blue-600">Dados</span>
+                </div>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                <div class="flex items-center gap-2">
+                    <div id="step-2-icon" class="w-8 h-8 bg-gray-300 text-white rounded-full flex items-center justify-center font-semibold">2</div>
+                    <span id="step-2-text" class="text-gray-400">Pagamento</span>
+                </div>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                <div class="flex items-center gap-2">
+                    <div id="step-3-icon" class="w-8 h-8 bg-gray-300 text-white rounded-full flex items-center justify-center font-semibold">3</div>
+                    <span id="step-3-text" class="text-gray-400">Confirmação</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-xl font-semibold mb-4">Dados pessoais</h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="name" name="name" placeholder="Nome completo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                            <input type="text" id="cpf" name="cpf" placeholder="CPF" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="email" id="email" name="email" placeholder="E-mail" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                            <input type="tel" id="phone" name="phone" placeholder="Telefone (ex: 119...)" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i data-lucide="map-pin" class="w-6 h-6 text-blue-600"></i>
+                        <h2 class="text-xl font-semibold">Endereço de entrega</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <input type="text" id="cep" name="cep" placeholder="CEP" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                        <div class="grid grid-cols-3 gap-4">
+                            <input type="text" id="address" name="address" placeholder="Endereço" class="col-span-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                            <input type="text" id="number" name="number" placeholder="Número" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                        </div>
+                        <input type="text" id="complement" name="complement" placeholder="Complemento (opcional)" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input type="text" id="neighborhood" name="neighborhood" placeholder="Bairro" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                            <input type="text" id="city" name="city" placeholder="Cidade" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                            <input type="text" id="state" name="state" placeholder="Estado (UF)" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex items-center gap-2 mb-4">
+                         <i data-lucide="qr-code" class="w-6 h-6 text-blue-600"></i>
+                        <h2 class="text-xl font-semibold">Pagamento</h2>
+                    </div>
+                    <div class="bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-400 rounded-lg p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="bg-teal-500 p-2 rounded-lg">
+                                <i data-lucide="qr-code" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg">Pix</h3>
+                                <p class="text-gray-600 text-sm">Aprovação imediata</p>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg p-4 border border-teal-200">
+                            <p class="text-sm text-gray-700 mb-2">
+                                <span class="font-semibold">Como funciona:</span>
+                            </p>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Finalize o pedido e copie o código Pix</li>
+                                <li>• Abra o app do seu banco e escolha pagar com Pix</li>
+                                <li>• Cole o código e confirme o pagamento</li>
+                                <li>• Pronto! Aprovação instantânea</li>
+                            </ul>
+                        </div>
+                        <div class="mt-4 flex items-center gap-2 text-sm text-teal-700">
+                            <i data-lucide="lock" class="w-4 h-4"></i>
+                            <span class="font-medium">Pagamento seguro e rápido</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm p-6 sticky top-4">
+                    <h2 class="text-xl font-semibold mb-4">Resumo da compra</h2>
+                    
+                    <div id="cart-summary-items" class="space-y-4 mb-6">
+                        </div>
+
+                    <div class="border-t pt-4 space-y-3 mb-4">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Subtotal</span>
+                            <span id="summary-subtotal" class="font-medium">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="truck" class="w-4 h-4 text-green-600"></i>
+                                <span class="text-gray-600">Frete</span>
+                            </div>
+                            <span id="summary-shipping" class="font-medium">R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4 mb-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-semibold">Total</span>
+                            <span id="summary-total" class="text-2xl font-bold text-blue-600">R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <button id="finalize-payment-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-lg transition-colors shadow-md">
+                        Finalizar compra
+                    </button>
+
+                    <div class="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        <span>Pagamento 100% seguro</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="pix-modal-overlay" id="pixModal">
+        <div class="pix-modal-content">
+            <div class="pix-modal-header">
+                <h3>Pague com PIX</h3>
+                <button class="pix-modal-close" onclick="closePixModal()">&times;</button>
+            </div>
+            
+            <div id="pixLoader" style="text-align: center; padding: 40px 0;">
+                <div class="pix-loader-spinner"></div>
+                <p>Gerando seu PIX... Aguarde.</p>
+            </div>
+
+            <div id="pixPaymentInfo" class="hidden">
+                <p style="text-align: center;">Escaneie o QR Code abaixo:</p>
+                <img id="pixQrCode" src="" alt="PIX QR Code">
+                <p style="text-align: center; margin-top: 15px;">Ou copie o código:</p>
+                <div class="pix-copy-area">
+                    <input type="text" id="pixCopyPaste" readonly>
+                    <button onclick="copyPixCode()">Copiar</button>
+                </div>
+                <p style="text-align: center; font-weight: bold; margin-top: 20px;">
+                    <span class="pix-loader-spinner" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 5px;"></span>
+                    Aguardando pagamento...
+                </p>
+            </div>
+
+            <div id="pixSuccessMessage" class="hidden" style="text-align: center; padding: 40px 0; color: #00A650;">
+                <h3 style="font-size: 24px;">✓</h3>
+                <h3>Pagamento Aprovado!</h3>
+                <p>Seu pedido foi confirmado.</p>
+            </div>
+            
+            <div id="pixErrorMessage" class="hidden" style="text-align: center; padding: 40px 0; color: #ff4757;">
+                 <h3 style="font-size: 24px;">✗</h3>
+                <h3>Erro no Pagamento</h3>
+                <p id="pixErrorDetails">Não foi possível processar seu pagamento.</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Variáveis globais para o checkout
+        let paymentIntervalId = null;
+        let totalValue = 0; // Armazena o valor total em decimal
+        const frete = 0.00; // Valor fixo do frete, como no seu React
+
+        // Função para formatar moeda
+        function formatCurrency(value) {
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // 1. Roda o script de ícones
+        lucide.createIcons();
+
+        // 2. Roda quando a página carrega
+        document.addEventListener('DOMContentLoaded', () => {
+            // Pega o carrinho salvo pelo index.html
+            const cartData = localStorage.getItem('checkoutCart');
+            const cart = cartData ? JSON.parse(cartData) : [];
+
+            if (cart.length === 0) {
+                // Se não há carrinho, informa o usuário e talvez o redirecione
+                document.getElementById('cart-summary-items').innerHTML = '<p class="text-red-500 text-sm">Seu carrinho está vazio.</p>';
+                document.getElementById('finalize-payment-btn').disabled = true;
+                return;
+            }
+            
+            // Calcula o subtotal
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            totalValue = subtotal + frete; // Armazena o total globalmente
+
+            // Preenche o resumo da compra
+            const summaryContainer = document.getElementById('cart-summary-items');
+            summaryContainer.innerHTML = cart.map(item => `
+                <div class="flex gap-4">
+                    <img src="${item.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop'}" alt="${item.name}" class="w-20 h-20 object-cover rounded-lg" />
+                    <div class="flex-1">
+                        <p class="font-medium text-sm">${item.name} ${item.storage ? item.storage : ''} - ${item.color}</p>
+                        <p class="text-gray-500 text-sm">Quantidade: ${item.quantity}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Preenche os totais
+            document.getElementById('summary-subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('summary-shipping').textContent = formatCurrency(frete);
+            document.getElementById('summary-total').textContent = formatCurrency(totalValue);
+        });
+        
+        // 3. Adiciona o clique ao botão de finalizar
+        document.getElementById('finalize-payment-btn').addEventListener('click', () => {
+            // Valida o formulário
+            const formData = {
+                name: document.getElementById('name').value,
+                cpf: document.getElementById('cpf').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                cep: document.getElementById('cep').value,
+                address: document.getElementById('address').value,
+                number: document.getElementById('number').value,
+                complement: document.getElementById('complement').value,
+                neighborhood: document.getElementById('neighborhood').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value
+            };
+            
+            // Validação simples
+            if (!formData.name || !formData.cpf || !formData.email || !formData.phone || !formData.cep || !formData.address || !formData.number || !formData.neighborhood || !formData.city || !formData.state) {
+                alert('Por favor, preencha todos os campos obrigatórios de dados pessoais e endereço.');
+                return;
+            }
+
+            // Se o formulário estiver OK, inicia o pagamento
+            initiateCheckout(formData);
+        });
+
+        // 4. Lógica de Pagamento PIX (Movida do index.html para cá)
+
+        function initiateCheckout(formData) {
+            // Mostra o modal PIX no estado "carregando"
+            openPixModal();
+            // Atualiza a barra de progresso
+            document.getElementById('step-2-icon').classList.remove('bg-gray-300');
+            document.getElementById('step-2-icon').classList.add('bg-blue-600');
+            document.getElementById('step-2-text').classList.remove('text-gray-400');
+            document.getElementById('step-2-text').classList.add('text-blue-600');
+            
+            // Chama a função para gerar o PIX no backend
+            generatePixPayment(totalValue, formData);
+        }
+
+        function openPixModal() {
+            document.getElementById('pixLoader').classList.remove('hidden');
+            document.getElementById('pixPaymentInfo').classList.add('hidden');
+            document.getElementById('pixSuccessMessage').classList.add('hidden');
+            document.getElementById('pixErrorMessage').classList.add('hidden');
+            document.getElementById('pixQrCode').src = "";
+            document.getElementById('pixCopyPaste').value = "";
+            document.getElementById('pixModal').classList.add('active');
+        }
+
+        function closePixModal() {
+            document.getElementById('pixModal').classList.remove('active');
+            if (paymentIntervalId) {
+                clearInterval(paymentIntervalId);
+                paymentIntervalId = null;
+            }
+        }
+
+        function copyPixCode() {
+            const input = document.getElementById('pixCopyPaste');
+            input.select();
+            input.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                alert('Código PIX copiado!'); // 'showNotification' não existe aqui, usamos alert
+            } catch (err) {
+                alert('Erro ao copiar o código.');
+            }
+        }
+
+        async function generatePixPayment(totalPrice, formData) {
+            try {
+                const response = await fetch('gerar_pix_horuspay.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // Enviamos o valor E os dados do cliente
+                    body: JSON.stringify({ 
+                        valor: totalPrice,
+                        cliente: formData 
+                    }) 
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.details || data.message || 'Erro ao gerar PIX.');
+                }
+
+                const transactionId = data.transaction_id;
+                const qrCodeUrl = data.qr_code_url;
+                const qrCodeText = data.pix_code;
+
+                if (!transactionId || !qrCodeUrl || !qrCodeText) {
+                    throw new Error('Resposta da API de pagamento incompleta.');
+                }
+
+                document.getElementById('pixQrCode').src = qrCodeUrl;
+                document.getElementById('pixCopyPaste').value = qrCodeText;
+                document.getElementById('pixLoader').classList.add('hidden');
+                document.getElementById('pixPaymentInfo').classList.remove('hidden');
+
+                startPaymentPolling(transactionId);
+
+            } catch (error) {
+                console.error('Erro em generatePixPayment:', error);
+                document.getElementById('pixLoader').classList.add('hidden');
+                document.getElementById('pixErrorDetails').textContent = error.message;
+                document.getElementById('pixErrorMessage').classList.remove('hidden');
+            }
+        }
+
+        function startPaymentPolling(transactionId) {
+            if (paymentIntervalId) {
+                clearInterval(paymentIntervalId);
+            }
+            paymentIntervalId = setInterval(async () => {
+                await checkPaymentStatus(transactionId);
+            }, 3000);
+        }
+
+        async function checkPaymentStatus(transactionId) {
+            try {
+                const response = await fetch('verificar_pix_horuspay.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transaction_id: transactionId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.warn('Erro ao verificar status:', data.message || 'Erro de rede');
+                    return;
+                }
+
+                if (data.status === 'PAGO') {
+                    clearInterval(paymentIntervalId);
+                    paymentIntervalId = null;
+
+                    document.getElementById('pixPaymentInfo').classList.add('hidden');
+                    document.getElementById('pixSuccessMessage').classList.remove('hidden');
+
+                    // Atualiza a barra de progresso
+                    document.getElementById('step-3-icon').classList.remove('bg-gray-300');
+                    document.getElementById('step-3-icon').classList.add('bg-blue-600');
+                    document.getElementById('step-3-text').classList.remove('text-gray-400');
+                    document.getElementById('step-3-text').classList.add('text-blue-600');
+
+                    // Limpa o carrinho do cache
+                    localStorage.removeItem('checkoutCart');
+
+                    setTimeout(closePixModal, 4000);
+                    // Você pode redirecionar para uma página de "obrigado" aqui
+                    // window.location.href = 'obrigado.html';
+
+                } else if (data.status === 'ERRO') {
+                    clearInterval(paymentIntervalId);
+                    paymentIntervalId = null;
+                    document.getElementById('pixPaymentInfo').classList.add('hidden');
+                    document.getElementById('pixErrorDetails').textContent = data.details || 'Ocorreu um erro no servidor.';
+                    document.getElementById('pixErrorMessage').classList.remove('hidden');
+                }
+                // Se 'PENDENTE', continua o loop
+
+            } catch (error) {
+                console.error('Erro em checkPaymentStatus:', error);
+            }
+        }
+    </script>
+</body>
+</html>
